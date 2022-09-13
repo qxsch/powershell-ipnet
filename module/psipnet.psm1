@@ -376,6 +376,10 @@ class Subnet {
         return $true
     }
 
+    [bool] Intersects([string]$snet) {
+        return $this.Intersects([Subnet]::new($snet))
+    }
+
     [bool] Intersects([Subnet]$snet) {
         $ipbm = $this.ip.GetBitMask()
         $maskbm = $this.mask.GetBitMask()
