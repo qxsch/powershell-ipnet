@@ -381,7 +381,7 @@ class Subnet {
         $maskbm = $this.mask.GetBitMask()
 
         $ipbm2 = $snet.GetSubnetIP().GetBitMask()
-        $maskbm2 = $this.GetSubnetMask().GetBitMask()
+        $maskbm2 = $snet.GetSubnetMask().GetBitMask()
 
         $len = $ipbm.Count
         # different ip versions? return false
