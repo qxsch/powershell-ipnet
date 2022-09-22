@@ -40,7 +40,7 @@ classDiagram
         string ToString()
     }
 
-    class SubnetIPIterator : System.Collections.IEnumerator {
+    class SubnetIPIterator {
         SubnetIPIterator(Subnet subnet)
         void Reset()
         bool MoveNext()
