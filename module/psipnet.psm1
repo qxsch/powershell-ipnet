@@ -478,6 +478,150 @@ class Subnet {
         
         return $s
     }
+
+    [SubnetIPIterator] GetIPIterator() {
+        return [SubnetIPIterator]::new($this)
+    }
+}
+
+class SubnetIPIterator : System.Collections.IEnumerator {
+    [Subnet] hidden $subnet
+    [BitArrayIterator] hidden $baiter
+    [int[]] hidden $bapos
+
+    SubnetIPIterator([Subnet] $subnet) {
+        $this.subnet = $subnet
+
+        $len = $this.subnet.GetAddressSpaceBits()
+        if($len -lt 1) {
+            throw "Subnetmask it scoped to a single IP."
+        }
+        $this.baiter = [BitArrayIterator]::new($len)
+
+        $this.bapos = new-object int[] $len
+        $bm = $this.subnet.GetSubnetMask().GetBitMask()
+        $bmlen = $bm.Count
+        $ii=0;
+        for($i=0; $i -lt $bmlen -and $ii -lt $len; $i++) {
+            if($bm[$i] -eq $false) {
+                $this.bapos[$ii] = $i
+                $ii++
+            }
+        }
+    }
+
+    [void] Reset() {
+        $this.baiter.Reset()
+    }
+
+    # Enumerators are positioned before the first element until the first MoveNext() call.
+    [bool] MoveNext() {
+        return $this.baiter.MoveNext()
+    }
+
+    [object] get_Current() {
+        return $this.GetIP()
+    }
+
+    [IP] GetIP() {
+        $bm = $this.Subnet.GetSubnetIP().GetBitMask()
+        $ba = $this.baiter.GetPosition()
+        $len = $ba.Count
+
+        for($i=0; $i -lt $len; $i++) {
+            $bm[$this.bapos[$i]] = $ba[$i]
+        }
+
+        return [IP]::new([Subnet]::GetIPFromBitmask($bm))
+    }
+
+    [bool[]] GetPosition() {
+        return $this.baiter.GetPosition()
+    }
+
+    [bool] SetPosition([bool[]]$bits) {
+        return $this.baiter.SetPosition($bits)
+    }
+
+    [bool] Skip([int]$num) {
+        return $this.baiter.Skip($num)
+    }
+}
+
+class BitArrayIterator : System.Collections.IEnumerator {
+    [bool[]] hidden $bitarray
+    [bool] hidden $minusOne = $true
+
+    BitArrayIterator([int]$bits) {
+        if($bits -lt 1) {
+            throw "Invalid Value"
+        }
+
+        $this.bitarray = new-object bool[] $bits
+        $this.Reset()
+    }
+
+    [void] Reset() {
+        $len = $this.bitarray.Count
+        for($i = 0; $i -lt $len; $i++) {
+            $this.bitarray[$i] = $false
+        }
+        $this.minusOne = $true
+    }
+
+    # Enumerators are positioned before the first element until the first MoveNext() call.
+    [bool] MoveNext() {
+        if($this.minusOne -eq $true) {
+            $this.minusOne = $false
+            return $true
+        }
+        $len = $this.bitarray.Count
+        for($i = $len - 1; $i -ge 0; $i--) {
+            if($this.bitarray[$i] -eq $true) {
+                $this.bitarray[$i] = $false
+            }
+            else {
+                $this.bitarray[$i] = $true
+                return $true;
+            }
+        }
+        return $false
+    }
+
+    [object] get_Current() {
+        return $this.bitarray
+    }
+
+    [bool] Skip([int]$num) {
+        if($num -lt 1) {
+            return $false
+        }
+        if($this.minusOne) {
+            $this.minusOne = $false
+            if($num -eq 1) {
+                return $true
+            }
+            $num--
+        }
+        for($i = 0; $i -lt $num; $i++) {
+            if(-not $this.MoveNext()) {
+                return $false
+            }
+        }
+        return $true
+    }
+
+    [bool[]] GetPosition() {
+        return $this.bitarray
+    }
+
+    [bool] SetPosition([bool[]]$bits) {
+        if($bits.Count -eq $this.bitarray.Count) {
+            $this.bitarray = $bits
+            return $true
+        }
+        return $false
+    }
 }
 
 

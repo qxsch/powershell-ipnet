@@ -21,12 +21,13 @@ classDiagram
         IP ConvertToIPv6()
         string ToString()
     }
-    class Subnet{
-        Subnet(string ip)
+    class Subnet {
+        Subnet(string subnet)
         IP GetSubnetIP()
         IP GetSubnetMask()
         IP GetFirstIP()
         IP GetLastIP()
+        SubnetIPIterator GetIPIterator()
         int GetAddressSpaceBits()
         string GetAddressSpace()
         bool IsIPv4()
@@ -37,6 +38,17 @@ classDiagram
         bool ContainsIP(IP ip)
         Subnet ConvertToIPv6()
         string ToString()
+    }
+
+    class SubnetIPIterator : System.Collections.IEnumerator {
+        SubnetIPIterator(Subnet subnet)
+        void Reset()
+        bool MoveNext()
+        object get_Current()
+        IP GetIP()
+        bool[] GetPosition()
+        bool SetPosition(bool[] bits)
+        bool Skip(int num)
     }
 ```
 
@@ -106,4 +118,46 @@ Get-IPAddressInfo "192.168.1.2"
 
 # Get IP Info
 Get-IPAddressInfo "::FFFF:0A0A:0A0A"
+```
+
+```powershell
+# Get all IPs of the subnet
+$subnet = New-IPSubnet "192.168.1.0/24"
+foreach($ip in $subnet.GetIPIterator()) {
+    Write-Host " * $ip"
+}
+```
+
+```powershell
+# Get all even IPs of the subnet, starting at 200
+$subnet = New-IPSubnet "192.168.1.0/24"
+
+$iter = $subnet.GetIPIterator()
+$iter.Skip(200) | Out-Null  # starting skip first 200 (counting from 0 also means start at 200)
+while($iter.MoveNext()) {
+    Write-Host $iter.GetIP()
+    $iter.Skip(1) | Out-Null # skip one in every iteration, so we will just get even IPs
+}
+```
+
+
+```powershell
+# this subnet has an address space of 16'777'216 IPs
+$subnet = New-IPSubnet "10.0.0.0/8"
+Write-Host ("This subnet can accommodate " + $subnet.GetAddressSpace() + " IPs")
+
+$iter = $subnet.GetIPIterator()
+
+# skip first 16 bits of the subnet (just print range 10.255.255.0 - 10.255.255.255)
+$bits = $iter.GetPosition()
+$bits[0] = $true ; $bits[1] = $true ; $bits[2] = $true ; $bits[3] = $true
+$bits[4] = $true ; $bits[5] = $true ; $bits[6] = $true ; $bits[7] = $true
+$bits[8] = $true ; $bits[9] = $true ; $bits[10] = $true ; $bits[11] = $true
+$bits[12] = $true ; $bits[13] = $true ; $bits[14] = $true ; $bits[15] = $true
+$iter.SetPosition($bits) | Out-Null
+
+# iterate - this will just print range 10.255.255.0 - 10.255.255.255
+while($iter.MoveNext()) {
+    Write-Host $iter.GetIP()
+}
 ```
