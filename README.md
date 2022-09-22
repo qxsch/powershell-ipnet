@@ -3,8 +3,9 @@
 Exports the following Cmdlets:
  * ``New-IPAddress``  Creates a new IP Object
  * ``New-IPSubnet``   Creates a new Subnet Object
- * ``Get-IPSubnetInfo``    Displays the information of an IP
- * ``Get-IPAddressInfo``   Displays the information of a Subnet
+ * ``New-IPSubnetIterator``  Creates a new SubnetIPIterator Object
+ * ``Get-IPSubnetInfo``    Displays the information about an IP
+ * ``Get-IPAddressInfo``   Displays the information about a Subnet
 
 See class diagram:
 ```mermaid
@@ -160,5 +161,11 @@ $iter.SetPosition($bits) | Out-Null
 # iterate - this will just print range 10.255.255.0 - 10.255.255.255
 while($iter.MoveNext()) {
     Write-Host $iter.GetIP()
+}
+```
+
+```powershell
+foreach($ip in (New-IPSubnetIterator "192.168.1.0/24" -Skip 200)) {
+    Write-Host " * $ip"
 }
 ```

@@ -771,4 +771,44 @@ function Get-IPAddressInfo {
     }
 }
 
-Export-ModuleMember -Function New-IPAddress, New-IPSubnet, Get-IPSubnetInfo, Get-IPAddressInfo
+<#
+ .Synopsis
+  Creates a new iterator for a Subnet
+
+ .Description
+  Creates a new iterator for a Subnet
+
+ .Parameter subnet
+  The IP Subnet in V4 or V6 Format
+
+ .Parameter Skip
+  Number of entries, that should be skipped
+
+ .Example
+   foreach($ip in (New-IPSubnetIterator "192.168.1.0/24")) {
+      Write-Host " * $ip"
+   }
+
+ .Example
+   $iter = New-IPSubnetIterator "192.168.1.0/24" -Skip 200
+   while($iter.MoveNext()) {
+       Write-Host $iter.Current
+       $iter.Skip(1) | Out-Null  # skip one in every iteration, so we will just get even IPs
+   }
+#>
+function New-IPSubnetIterator {
+    param(
+        [Parameter(Position=0, Mandatory=$true)]
+        [string]$subnet,
+        [int]$Skip = 0
+    )
+
+    $iter = [SubnetIPIterator]::new([Subnet]::new($subnet))
+    if($Skip -gt 0) {
+        $iter.Skip($Skip) | Out-Null
+    }
+
+    return $iter
+}
+
+Export-ModuleMember -Function New-IPAddress, New-IPSubnet, Get-IPSubnetInfo, Get-IPAddressInfo, New-IPSubnetIterator
