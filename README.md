@@ -41,6 +41,7 @@ classDiagram
     }
 
     class SubnetIPIterator {
+        IP Current
         SubnetIPIterator(Subnet subnet)
         void Reset()
         bool MoveNext()
