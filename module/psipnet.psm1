@@ -543,6 +543,35 @@ class SubnetIPIterator : System.Collections.IEnumerator {
         return $this.baiter.SetPosition($bits)
     }
 
+    [bool] SetPositionFirstBits([int]$num, [bool]$val) {
+        if($num -lt 0) {
+            return $false
+        }
+        $bits = $this.baiter.GetPosition()
+        if($num -gt $bits.Count) {
+            return $false
+        }
+        for($i = 0 ; $i -lt $num; $i++) {
+            $bits[$i] = $val
+        }
+        return $this.baiter.SetPosition($bits)
+    }
+
+    [bool] SetPositionLastBits([int]$num, [bool]$val) {
+        if($num -lt 0) {
+            return $false
+        }
+        $bits = $this.baiter.GetPosition()
+        if($num -gt $bits.Count) {
+            return $false
+        }
+        $len = $bits.Count
+        for($i = 0 ; $i -lt $num; $i++) {
+            $bits[$len - $i -1] = $val
+        }
+        return $this.baiter.SetPosition($bits)
+    }
+
     [bool] Skip([int]$num) {
         return $this.baiter.Skip($num)
     }

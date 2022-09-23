@@ -50,6 +50,8 @@ classDiagram
         IP GetIP()
         bool[] GetPosition()
         bool SetPosition(bool[] bits)
+        bool SetPositionFirstBits(int num, bool val)
+        bool SetPositionLastBits(int num, bool val)
         bool Skip(int num)
     }
 ```
