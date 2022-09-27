@@ -60,7 +60,7 @@ classDiagram
 
     class SubnetSubnetIterator {
         Subnet Current
-        SubnetSubnetIterator(Subnet subnet, in cidrbits)
+        SubnetSubnetIterator(Subnet subnet, int cidrbits)
         void Reset()
         bool MoveNext()
         object get_Current()
