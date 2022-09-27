@@ -22,6 +22,7 @@ classDiagram
         IP ConvertToIPv6()
         string ToString()
     }
+
     class Subnet {
         Subnet(string subnet)
         IP GetSubnetIP()
@@ -29,10 +30,12 @@ classDiagram
         IP GetFirstIP()
         IP GetLastIP()
         SubnetIPIterator GetIPIterator()
+        SubnetSubnetIterator GetSubnetIterator(int cidrbits)
         int GetAddressSpaceBits()
         string GetAddressSpace()
         bool IsIPv4()
         bool IsIPv6()
+        bool IsCIDR()
         bool Intersects(string snet)
         bool Intersects(Subnet snet)
         bool ContainsIP(string ip)
@@ -48,6 +51,20 @@ classDiagram
         bool MoveNext()
         object get_Current()
         IP GetIP()
+        bool[] GetPosition()
+        bool SetPosition(bool[] bits)
+        bool SetPositionFirstBits(int num, bool val)
+        bool SetPositionLastBits(int num, bool val)
+        bool Skip(int num)
+    }
+
+    class SubnetSubnetIterator {
+        Subnet Current
+        SubnetSubnetIterator(Subnet subnet, in cidrbits)
+        void Reset()
+        bool MoveNext()
+        object get_Current()
+        Subnet GetSubnet()
         bool[] GetPosition()
         bool SetPosition(bool[] bits)
         bool SetPositionFirstBits(int num, bool val)
@@ -169,5 +186,12 @@ while($iter.MoveNext()) {
 ```powershell
 foreach($ip in (New-IPSubnetIterator "192.168.1.0/24" -Skip 200)) {
     Write-Host " * $ip"
+}
+```
+
+```powershell
+# iterate over all /28 subnets that are in 192.168.1.0/24
+foreach($snet in (New-SubnetSubnetIterator "192.168.1.0/24" 28)) {
+    Write-Host " * $snet"
 }
 ```

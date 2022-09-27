@@ -412,6 +412,10 @@ class Subnet {
         return $this.ip.GetBitMask().Count -eq 128
     }
 
+    [bool] IsCIDR() {
+        return $this.cidr -ne -1
+    }
+
     [Subnet] ConvertToIPv6() {
         if($this.IsIPv6()) {
             return $this
@@ -481,6 +485,10 @@ class Subnet {
 
     [SubnetIPIterator] GetIPIterator() {
         return [SubnetIPIterator]::new($this)
+    }
+
+    [SubnetSubnetIterator] GetSubnetIterator([int]$cidrbits) {
+        return [SubnetSubnetIterator]::new($this, $cidrbits)
     }
 }
 
@@ -577,9 +585,132 @@ class SubnetIPIterator : System.Collections.IEnumerator {
     }
 }
 
+class SubnetSubnetIterator : System.Collections.IEnumerator {
+    [Subnet] hidden $subnet
+    [BitArrayIterator] hidden $baiter
+    [int[]] hidden $bapos
+    [string] hidden $subnetmask
+
+    SubnetSubnetIterator([Subnet] $subnet, [int]$cidrbits) {
+        $this.subnet = $subnet
+
+        if($this.subnet.IsIPv4()) {
+            $bits = 32 - $cidrbits
+        }
+        elseif($this.subnet.IsIPv6()) {
+            $bits = 128 - $cidrbits
+        }
+        else {
+            throw "Not Implemented"
+        }
+        if($bits -lt 0) {
+            throw "Invalid cidr bits number"
+        }
+
+        $len = $this.subnet.GetAddressSpaceBits()
+        if($len -lt 1) {
+            throw "Subnetmask it scoped to a single IP."
+        }
+        if($bits -ge $len) {
+            throw "Subnetmask just has $len bits, cannot iterate with $bits"
+        }
+        $this.baiter = [BitArrayIterator]::new($len)
+        $this.baiter.SetBitSteps($bits + 1)
+
+        $this.bapos = new-object int[] $len
+        $bm = $this.subnet.GetSubnetMask().GetBitMask()
+        $bmlen = $bm.Count
+        $ii=0;
+        for($i=0; $i -lt $bmlen -and $ii -lt $len; $i++) {
+            if($bm[$i] -eq $false) {
+                $this.bapos[$ii] = $i
+                $ii++
+            }
+        }
+
+        if($this.subnet.IsCIDR()) {
+            $this.subnetmask = $cidrbits.ToString()
+        }
+        else {
+            for($i=0; $i -lt $len - $bits; $i++) {
+                $bm[$this.bapos[$i]] = $true
+            }
+
+            $this.subnetmask = [IP]::new([Subnet]::GetIPFromBitmask($bm)).ToString()
+        }
+    }
+
+    [void] Reset() {
+        $this.baiter.Reset()
+    }
+
+    # Enumerators are positioned before the first element until the first MoveNext() call.
+    [bool] MoveNext() {
+        return $this.baiter.MoveNext()
+    }
+
+    [object] get_Current() {
+        return $this.GetSubnet()
+    }
+
+    [Subnet] GetSubnet() {
+        $bm = $this.Subnet.GetSubnetIP().GetBitMask()
+        $ba = $this.baiter.GetPosition()
+        $len = $ba.Count
+
+        for($i=0; $i -lt $len; $i++) {
+            $bm[$this.bapos[$i]] = $ba[$i]
+        }
+        
+        return [Subnet]::new([Subnet]::GetIPFromBitmask($bm) + "/" + $this.subnetmask)
+    }
+
+    [bool[]] GetPosition() {
+        return $this.baiter.GetPosition()
+    }
+
+    [bool] SetPosition([bool[]]$bits) {
+        return $this.baiter.SetPosition($bits)
+    }
+
+    [bool] SetPositionFirstBits([int]$num, [bool]$val) {
+        if($num -lt 0) {
+            return $false
+        }
+        $bits = $this.baiter.GetPosition()
+        if($num -gt $bits.Count) {
+            return $false
+        }
+        for($i = 0 ; $i -lt $num; $i++) {
+            $bits[$i] = $val
+        }
+        return $this.baiter.SetPosition($bits)
+    }
+
+    [bool] SetPositionLastBits([int]$num, [bool]$val) {
+        if($num -lt 0) {
+            return $false
+        }
+        $bits = $this.baiter.GetPosition()
+        if($num -gt $bits.Count) {
+            return $false
+        }
+        $len = $bits.Count
+        for($i = 0 ; $i -lt $num; $i++) {
+            $bits[$len - $i -1] = $val
+        }
+        return $this.baiter.SetPosition($bits)
+    }
+
+    [bool] Skip([int]$num) {
+        return $this.baiter.Skip($num)
+    }
+}
+
 class BitArrayIterator : System.Collections.IEnumerator {
     [bool[]] hidden $bitarray
     [bool] hidden $minusOne = $true
+    [int] hidden $steps = 1
 
     BitArrayIterator([int]$bits) {
         if($bits -lt 1) {
@@ -598,6 +729,18 @@ class BitArrayIterator : System.Collections.IEnumerator {
         $this.minusOne = $true
     }
 
+    [int] GetBitSteps() {
+        return $this.steps
+    }
+
+    [bool] SetBitSteps([int]$steps) {
+        if($steps -gt 0   -and  $steps -lt $this.bitarray.Count) {
+            $this.steps = $steps
+            return $true
+        }
+        return $false
+    }
+
     # Enumerators are positioned before the first element until the first MoveNext() call.
     [bool] MoveNext() {
         if($this.minusOne -eq $true) {
@@ -605,7 +748,7 @@ class BitArrayIterator : System.Collections.IEnumerator {
             return $true
         }
         $len = $this.bitarray.Count
-        for($i = $len - 1; $i -ge 0; $i--) {
+        for($i = $len - $this.steps; $i -ge 0; $i--) {
             if($this.bitarray[$i] -eq $true) {
                 $this.bitarray[$i] = $false
             }
@@ -802,10 +945,10 @@ function Get-IPAddressInfo {
 
 <#
  .Synopsis
-  Creates a new iterator for a Subnet
+  Creates a new ip iterator for a Subnet
 
  .Description
-  Creates a new iterator for a Subnet
+  Creates a new ip iterator for a Subnet
 
  .Parameter subnet
   The IP Subnet in V4 or V6 Format
@@ -840,4 +983,46 @@ function New-IPSubnetIterator {
     return $iter
 }
 
-Export-ModuleMember -Function New-IPAddress, New-IPSubnet, Get-IPSubnetInfo, Get-IPAddressInfo, New-IPSubnetIterator
+<#
+ .Synopsis
+  Creates a new subnet iterator for a Subnet
+
+ .Description
+  Creates a new subnet iterator for a Subnet
+
+ .Parameter subnet
+  The IP Subnet in V4 or V6 Format
+
+ .Parameter Skip
+  Number of entries, that should be skipped
+
+ .Example
+   foreach($snet in (New-SubnetSubnetIterator "192.168.1.0/24" 28)) {
+      Write-Host " * $snet"
+   }
+
+ .Example
+   $iter = New-IPSubnetIterator "192.168.1.0/24" 28 -Skip 2
+   while($iter.MoveNext()) {
+       Write-Host $iter.Current
+       $iter.Skip(1) | Out-Null  # skip one in every iteration, so we will just get even IPs
+   }
+#>
+function New-SubnetSubnetIterator {
+    param(
+        [Parameter(Position=0, Mandatory=$true)]
+        [string]$subnet,
+        [Parameter(Position=1, Mandatory=$true)]
+        [int]$cidrbits,
+        [int]$Skip = 0
+    )
+
+    $iter = [SubnetSubnetIterator]::new([Subnet]::new($subnet), $cidrbits)
+    if($Skip -gt 0) {
+        $iter.Skip($Skip) | Out-Null
+    }
+
+    return $iter
+}
+
+Export-ModuleMember -Function New-IPAddress, New-IPSubnet, Get-IPSubnetInfo, Get-IPAddressInfo, New-IPSubnetIterator, New-SubnetSubnetIterator
