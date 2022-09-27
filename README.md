@@ -4,6 +4,7 @@ Exports the following Cmdlets:
  * ``New-IPAddress``  Creates a new IP Object
  * ``New-IPSubnet``   Creates a new Subnet Object
  * ``New-IPSubnetIterator``  Creates a new SubnetIPIterator Object
+ * ``New-IPSubnetSliceIterator``  Creates a new SubnetSubnetIterator Object
  * ``Get-IPSubnetInfo``    Displays the information about an IP
  * ``Get-IPAddressInfo``   Displays the information about a Subnet
 
@@ -191,7 +192,7 @@ foreach($ip in (New-IPSubnetIterator "192.168.1.0/24" -Skip 200)) {
 
 ```powershell
 # iterate over all /28 subnets that are in 192.168.1.0/24
-foreach($snet in (New-SubnetSubnetIterator "192.168.1.0/24" 28)) {
-    Write-Host " * $snet"
+foreach($snet in (New-IPSubnetSliceIterator "192.168.1.0/24" 28)) {
+    Write-Host ( " * $snet     ( First: " + $snet.GetFirstIP() + "   Last: " + $snet.GetLastIP() + ")" )
 }
 ```

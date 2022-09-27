@@ -997,18 +997,18 @@ function New-IPSubnetIterator {
   Number of entries, that should be skipped
 
  .Example
-   foreach($snet in (New-SubnetSubnetIterator "192.168.1.0/24" 28)) {
+   foreach($snet in (New-IPSubnetSliceIterator "192.168.1.0/24" 28)) {
       Write-Host " * $snet"
    }
 
  .Example
-   $iter = New-IPSubnetIterator "192.168.1.0/24" 28 -Skip 2
+   # skip first 2
+   $iter = New-IPSubnetSliceIterator "192.168.1.0/24" 28 -Skip 2
    while($iter.MoveNext()) {
        Write-Host $iter.Current
-       $iter.Skip(1) | Out-Null  # skip one in every iteration, so we will just get even IPs
    }
 #>
-function New-SubnetSubnetIterator {
+function New-IPSubnetSliceIterator {
     param(
         [Parameter(Position=0, Mandatory=$true)]
         [string]$subnet,
@@ -1025,4 +1025,4 @@ function New-SubnetSubnetIterator {
     return $iter
 }
 
-Export-ModuleMember -Function New-IPAddress, New-IPSubnet, Get-IPSubnetInfo, Get-IPAddressInfo, New-IPSubnetIterator, New-SubnetSubnetIterator
+Export-ModuleMember -Function New-IPAddress, New-IPSubnet, Get-IPSubnetInfo, Get-IPAddressInfo, New-IPSubnetIterator, New-IPSubnetSliceIterator
