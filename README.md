@@ -97,9 +97,22 @@ $ip = New-IPAddress "::FFFF:0A0A:0A0A"
 
 ```powershell
 # convert an IPv4 Address to IPv6
+ConvertTo-IPv6Address "192.168.1.2"
+
+# you can also use this
 $ip = New-IPAddress "192.168.1.2"
 $ip.ConvertToIPv6()
 ```
+
+```powershell
+Compress-IPAdress "0000:0000:0000:0000:0000:0000:0000:FF00"
+# RESULT ::FF00
+
+Compress-IPAdress "0000:0000:0000:0000:0000:0000:0000:FF00" -Soft
+# RESULT 0:0:0:0:0:0:0:FF00
+```
+
+
 
 ```powershell
 # convert an IPv4 Subnet to IPv6
@@ -190,6 +203,22 @@ while($iter.MoveNext()) {
     Write-Host $iter.GetIP()
 }
 ```
+
+```powershell
+# this subnet has an address space of 16'777'216 IPs
+$subnet = New-IPSubnet "10.0.0.0/8"
+Write-Host ("This subnet can accommodate " + $subnet.GetAddressSpace() + " IPs")
+
+$iter = $subnet.GetIPIterator()
+
+$iter.SetIP("10.255.255.0")
+
+# iterate - this will just print range 10.255.255.0 - 10.255.255.255
+while($iter.MoveNext()) {
+    Write-Host $iter.GetIP()
+}
+```
+
 
 ```powershell
 foreach($ip in (New-IPSubnetIterator "192.168.1.0/24" -Skip 200)) {
