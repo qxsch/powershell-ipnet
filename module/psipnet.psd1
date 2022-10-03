@@ -69,7 +69,7 @@ Copyright = '(c) Marco Weber. All rights reserved.'
 # NestedModules = @()
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-FunctionsToExport = @("New-IPAddress", "New-IPSubnet", "Get-IPSubnetInfo", "Get-IPAddressInfo", "New-IPSubnetIterator", "New-IPSubnetSliceIterator")
+FunctionsToExport = @("New-IPAddress", "New-IPSubnet", "Get-IPSubnetInfo", "Get-IPAddressInfo", "New-IPSubnetIterator", "New-IPSubnetSliceIterator", "Compress-IPAdress", "ConvertTo-IPv6Address")
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
 CmdletsToExport = @()

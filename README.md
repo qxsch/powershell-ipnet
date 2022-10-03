@@ -7,6 +7,8 @@ Exports the following Cmdlets:
  * ``New-IPSubnetSliceIterator``  Creates a new SubnetSubnetIterator Object
  * ``Get-IPSubnetInfo``    Displays the information about an IP
  * ``Get-IPAddressInfo``   Displays the information about a Subnet
+ * ``Compress-IPAdress``       Compresses / normalizes an IP
+ * ``ConvertTo-IPv6Address``   Converts an IPv4 to IPv6
 
 See class diagram:
 ```mermaid
@@ -21,6 +23,8 @@ classDiagram
         bool BelongsToSubnet(string subnet)
         bool BelongsToSubnet(Subnet subnet)
         IP ConvertToIPv6()
+        string Normalize()
+        string Compress()
         string ToString()
     }
 
@@ -51,7 +55,10 @@ classDiagram
         void Reset()
         bool MoveNext()
         object get_Current()
+        void set_Current(object value)
         IP GetIP()
+        bool SetIP(string ip)
+        bool SetIP(IP ip)
         bool[] GetPosition()
         bool SetPosition(bool[] bits)
         bool SetPositionFirstBits(int num, bool val)

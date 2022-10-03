@@ -206,6 +206,49 @@ class IP {
 
         throw "IP cannot be converted to version 6"
     }
+
+    [string] Normalize() {
+        return [Subnet]::GetIPFromBitmask($this.ipbitmask).ToString()
+    }
+
+    [string] Compress() {
+        if($this.IsIPv6()) {
+            $s = [Subnet]::GetIPFromBitmask($this.ipbitmask).ToString()
+
+            if($s.Contains(":0:0:0:0:0:0:")) {
+                $s = $s.Replace(":0:0:0:0:0:0:", "::", 1)
+            }
+            elseif($s.Contains(":0:0:0:0:0:")) {
+                $s = $s.Replace(":0:0:0:0:0:", "::", 1)
+            }
+            elseif($s.Contains(":0:0:0:0:")) {
+                $s = $s.Replace(":0:0:0:0:", "::", 1)
+            }
+            elseif($s.Contains(":0:0:0:")) {
+                $s = $s.Replace(":0:0:0:", "::", 1)
+            }
+            elseif($s.Contains(":0:0:")) {
+                $s = $s.Replace(":0:0:", "::", 1)
+            }
+            elseif($s.Contains(":0:")) {
+                $s = $s.Replace(":0:", "::", 1)
+            }
+
+            if($s.StartsWith("0::")) {
+               $s = $s.Substring(1)
+            }
+            if($s.EndsWith("::0")) {
+                $s = $s.Substring(0, $s.Length -1)
+             }
+ 
+            return $s
+        }
+        elseif($this.IsIPv4()) {
+            return [Subnet]::GetIPFromBitmask($this.ipbitmask).ToString()
+        }
+
+        throw "IP cannot be compressed"
+    }
 }
 
 
@@ -292,7 +335,7 @@ class Subnet {
             return ($a -join ":")
         }
         else {
-            return ""
+            throw ( "Invalid IP adress with " + $bm.Count + " bits" )
         }
     }
 
@@ -531,6 +574,12 @@ class SubnetIPIterator : System.Collections.IEnumerator {
         return $this.GetIP()
     }
 
+    [void] set_Currrent([object] $value) {
+        if(-not $this.SetIP([IP] $value)) {
+            throw "Failed to set the IP"
+        }
+    }
+
     [IP] GetIP() {
         $bm = $this.Subnet.GetSubnetIP().GetBitMask()
         $ba = $this.baiter.GetPosition()
@@ -541,6 +590,27 @@ class SubnetIPIterator : System.Collections.IEnumerator {
         }
 
         return [IP]::new([Subnet]::GetIPFromBitmask($bm))
+    }
+
+
+    [bool] SetIP([string] $ip) {
+        return $this.SetIP([IP]::new($ip))
+    }
+
+    [bool] SetIP([IP] $ip) {
+        if(-not $this.Subnet.ContainsIP($ip)) {
+            return $false
+        }
+
+        $bm = $ip.GetBitMask()
+        $ba = $this.baiter.GetPosition()
+        $len = $ba.Count
+
+        for($i=0; $i -lt $len; $i++) {
+            $ba[$i] = $bm[$this.bapos[$i]]
+        }
+
+        return $this.SetPosition($ba)
     }
 
     [bool[]] GetPosition() {
@@ -829,6 +899,65 @@ function New-IPAddress {
 
 <#
  .Synopsis
+  Returns the compressed IP
+
+ .Description
+  Returns the compressed IP
+
+ .Parameter ip
+  The IP Address in V4 or V6 Format
+
+ .Parameter Soft
+  Switch that does a softer compression (just useful for IPv6)
+
+ .Example
+   Compress-IPAdress "0000:0000:0000:0000:0000:0000:0000:FF00"
+
+ .Example
+   Compress-IPAdress "192.168.000.001"
+#>
+function Compress-IPAdress {
+    param(
+        [Parameter(Position=0, Mandatory=$true)]
+        [string]$ip,
+        [switch]$Soft
+    )
+
+    if($Soft) {
+        return [IP]::new($ip).Normalize()
+    }
+    else {
+        return [IP]::new($ip).Compress()
+    }
+}
+
+<#
+ .Synopsis
+  Converts a IP to a new IP V6 Address Object
+
+ .Description
+  Converts a IP to a new IP V6 Address Object
+
+ .Parameter ip
+  The IP Address in V4 or V6 Format
+
+ .Parameter SoftCompression
+  Switch that does a softer compression (just useful for IPv6)
+
+ .Example
+   ConvertTo-IPv6Address "192.168.0.1"
+#>
+function ConvertTo-IPv6Address {
+    param(
+        [Parameter(Position=0, Mandatory=$true)]
+        [string]$ip
+    )
+
+    return [IP]::new($ip).ConvertToIPv6()
+}
+
+<#
+ .Synopsis
   Creates a new IP Subnet Object
 
  .Description
@@ -956,6 +1085,9 @@ function Get-IPAddressInfo {
  .Parameter Skip
   Number of entries, that should be skipped
 
+ .Parameter StartAtIp
+  IP where to start the iteration
+
  .Example
    foreach($ip in (New-IPSubnetIterator "192.168.1.0/24")) {
       Write-Host " * $ip"
@@ -967,15 +1099,24 @@ function Get-IPAddressInfo {
        Write-Host $iter.Current
        $iter.Skip(1) | Out-Null  # skip one in every iteration, so we will just get even IPs
    }
+
+ .Example
+   foreach($ip in (New-IPSubnetIterator "10.0.0.0/8" -StartAtIp "10.255.255.250")) {
+    Write-Host " * $ip"
+   }
 #>
 function New-IPSubnetIterator {
     param(
         [Parameter(Position=0, Mandatory=$true)]
         [string]$subnet,
-        [int]$Skip = 0
+        [int]$Skip = 0,
+        [string]$StartAtIp = ""
     )
 
     $iter = [SubnetIPIterator]::new([Subnet]::new($subnet))
+    if($StartAtIp.Trim() -ne "") {
+        $iter.SetIP($StartAtIp) | Out-Null
+    }
     if($Skip -gt 0) {
         $iter.Skip($Skip) | Out-Null
     }
@@ -1025,4 +1166,4 @@ function New-IPSubnetSliceIterator {
     return $iter
 }
 
-Export-ModuleMember -Function New-IPAddress, New-IPSubnet, Get-IPSubnetInfo, Get-IPAddressInfo, New-IPSubnetIterator, New-IPSubnetSliceIterator
+Export-ModuleMember -Function New-IPAddress, New-IPSubnet, Get-IPSubnetInfo, Get-IPAddressInfo, New-IPSubnetIterator, New-IPSubnetSliceIterator, Compress-IPAdress, ConvertTo-IPv6Address
