@@ -1,5 +1,10 @@
 # powershell-ipnet Module
 
+Installation works like this:
+```powershell
+Install-Module psipnet
+```
+
 Exports the following Cmdlets:
  * ``New-IPAddress``  Creates a new IP Object
  * ``New-IPSubnet``   Creates a new Subnet Object
