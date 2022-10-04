@@ -30,7 +30,7 @@ CompanyName = 'QXSCH'
 Copyright = '(c) Marco Weber. All rights reserved.'
 
 # Description of the functionality provided by this module
-# Description = ''
+Description = 'IP adress and Subnet module'
 
 # Minimum version of the PowerShell engine required by this module
 # PowerShellVersion = ''
